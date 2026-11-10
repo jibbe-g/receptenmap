@@ -1,0 +1,30 @@
+rules_version = '2';
+service cloud.firestore {
+ match /databases/{database}/documents {
+  function signedIn() { return request.auth != null && request.auth.token.email_verified == true; }
+  function member(library) { return signedIn() && exists(/databases/$(database)/documents/libraries/$(library)/members/$(request.auth.token.email)); }
+  function validRecipe(d) {
+   return d.keys().hasAll(['name','category','author','servings','minutes','ingredients','steps','notes','revision','updated','updatedBy'])
+    && d.keys().hasOnly(['name','category','author','servings','minutes','ingredients','steps','notes','revision','updated','updatedBy'])
+    && d.name is string && d.name.size() > 0 && d.name.size() <= 200
+    && d.category in ['Voorgerechten','Hoofdgerechten','Bijgerechten','Desserts','Bakken','Basisrecepten','Overig']
+    && d.author is string && d.author.size() <= 200
+    && d.servings is number && d.servings >= 1 && d.servings <= 10000
+    && d.minutes is number && d.minutes >= 1 && d.minutes <= 10000
+    && d.ingredients is string && d.ingredients.size() > 0 && d.ingredients.size() <= 100000
+    && d.steps is string && d.steps.size() > 0 && d.steps.size() <= 100000
+    && d.notes is string && d.notes.size() <= 10000
+    && d.revision is int && d.updated is timestamp && d.updated == request.time && d.updatedBy == request.auth.uid;
+  }
+  match /libraries/{library}/members/{email} {
+   allow get: if signedIn() && request.auth.token.email == email;
+   allow list, write: if false;
+  }
+  match /libraries/{library}/recipes/{recipe} {
+   allow read: if member(library);
+   allow create: if member(library) && validRecipe(request.resource.data) && request.resource.data.revision == 1;
+   allow update: if member(library) && validRecipe(request.resource.data) && request.resource.data.revision == resource.data.revision + 1;
+   allow delete: if member(library);
+  }
+ }
+}
