@@ -2,13 +2,14 @@ import {initializeApp} from 'firebase/app';
 import {getAuth,GoogleAuthProvider,signInWithPopup,signOut,onAuthStateChanged,browserSessionPersistence,setPersistence} from 'firebase/auth';
 import {getFirestore,collection,doc,onSnapshot,runTransaction,serverTimestamp} from 'firebase/firestore';
 import {cleanRecipe} from './recipes';
+import {oneAtATime} from './login';
 const config={apiKey:import.meta.env.VITE_FIREBASE_API_KEY,authDomain:import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,projectId:import.meta.env.VITE_FIREBASE_PROJECT_ID,appId:import.meta.env.VITE_FIREBASE_APP_ID};
 export const configured=Object.values(config).every(Boolean);
 export const library=import.meta.env.VITE_LIBRARY_ID||'keuken';
 let auth,db;
 if(configured){const app=initializeApp(config);auth=getAuth(app);db=getFirestore(app)}
 export const watchAuth=cb=>onAuthStateChanged(auth,cb);
-export async function login(){await setPersistence(auth,browserSessionPersistence);return signInWithPopup(auth,new GoogleAuthProvider())}
+export const login=oneAtATime(async()=>{await setPersistence(auth,browserSessionPersistence);return signInWithPopup(auth,new GoogleAuthProvider())});
 export const logout=()=>signOut(auth);
 export {db};
 export function watchMembership(user,cb,error){return onSnapshot(doc(db,'libraries',library,'members',user.email),s=>cb(s.exists()?s.data():null),error)}
