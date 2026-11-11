@@ -1,6 +1,6 @@
 # De Receptenmap
 
-React **18.3.1** + Vite + Firebase Authentication / Firestore + Recharts. Hosting: **Cloudflare Pages**, standaard `pages.dev`-adres. Fotoherkenning: Tesseract.js op het apparaat. Geen Cloudflare Worker, D1 of R2 nodig.
+React **18.3.1** + Vite + Firebase Authentication / Firestore + Recharts. Hosting: **Cloudflare Pages**, standaard `pages.dev`-adres. Fotoherkenning: OpenAI via een beveiligde Cloudflare Pages Function. Geen aparte Worker-app, D1 of R2 nodig. Zie [AI-FOTO-INSTELLEN.md](AI-FOTO-INSTELLEN.md) om de API-sleutel en fotolimieten te activeren.
 
 ## Collega’s laten aanvragen
 
@@ -81,7 +81,7 @@ Elke push naar `main` activeert daarna een nieuwe Pages-build. Wijzig je buildva
 - Verwijder je een lid, dan worden volgende reads/writes geweigerd; eerder bekeken of geëxporteerde inhoud kun je niet terughalen.
 - Importeer de JSON-export van de oorspronkelijke HTML-map. Exact dezelfde inhoud wordt overgeslagen; afwijkende inhoud krijgt een nieuw document, zodat bestaande recepten behouden blijven. Maximaal 500 recepten / 10 MB per import. Een onderbroken import kan deels geslaagd zijn; opnieuw importeren slaat al geladen identieke recepten over. Bij gelijktijdige imports kan dubbeling ontstaan.
 - De app exporteert JSON-back-ups. Het HTML-bestand zelf doorsturen is in deze React-versie vervangen door een gedeelde website-link.
-- Fotoherkenning verwerkt een JPG/PNG/WebP lokaal, maar downloadt software en taaldata via externe distributiepunten. Geen upload van de foto naar een OCR-dienst. Geen opslag van originele foto's. Controleer herkende hoeveelheden, indeling en allergenen altijd zelf.
+- Fotoherkenning verstuurt na een expliciete klik een verkleinde JPG-foto naar OpenAI via een Cloudflare Pages Function. Alleen geverifieerde leden krijgen toegang; de API-sleutel blijft op de server. Geen opslag van originele foto’s in deze app. Ontbrekende porties en tijden blijven leeg. Controleer de inhoud vóór opslaan. Het API-gebruik kost apart van ChatGPT. Zie [AI-FOTO-INSTELLEN.md](AI-FOTO-INSTELLEN.md).
 - Recharts toont aantallen per categorie, aantal vermelde makers en gemiddelde bereidingstijd; er worden geen bezoekgegevens verzameld.
 - Firebase en Cloudflare hebben gebruikslimieten en tarieven. Controleer de actuele quota in je eigen accounts.
 
@@ -91,6 +91,7 @@ Elke push naar `main` activeert daarna een nieuwe Pages-build. Wijzig je buildva
 npm test
 npm run test:rules
 npm run build
+npm run check:functions
 ```
 
-De geautomatiseerde tests controleren importcompatibiliteit, invoervalidatie, tekstindeling en portieomrekening. Daarnaast testen we de Firestore-regels met de lokale emulator: aanvragen, goedkeuring, afwijzing, privacy en het blokkeren van ongeoorloofde beheerdersrechten. De emulator vereist Java 21+. Zonder eigen Firebase-/Cloudflare-account zijn productie-authenticatie en de Firebase-configuratie **nog niet end-to-end geverifieerd**. Test toegestane/geweigerde accounts en gelijktijdig bewerken vóór gebruik met echte recepten.
+De geautomatiseerde tests controleren importcompatibiliteit, invoervalidatie, tekstindeling en portieomrekening. Daarnaast testen we de Firestore-regels met de lokale emulator: aanvragen, goedkeuring, afwijzing, privacy en het blokkeren van ongeoorloofde beheerdersrechten. De emulator vereist Java 21+. Tests controleren ook de fotofunctie, lidmaatschap, afbeeldingsvalidatie, onzekere AI-velden en de gebruikslimiet via Firestore REST. OpenAI wordt in tests gesimuleerd; fotoherkenning met echte API-toegang moet na het instellen van de sleutel worden geprobeerd. Zonder eigen Firebase-/Cloudflare-account zijn productie-authenticatie en de Firebase-configuratie **nog niet end-to-end geverifieerd**. Test toegestane/geweigerde accounts en gelijktijdig bewerken vóór gebruik met echte recepten.

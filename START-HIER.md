@@ -13,3 +13,5 @@ Je project is voorbereid. Je hoeft nog geen eigen domein te kopen.
 9. Test met jouw account en dat van een collega. Deel daarna de link.
 
 De volledige uitleg en commando's staan in README.md. Het zip-bestand bevat broncode, geen reeds verbonden Firebase-project of bestaande GitHub-repository. Je eerdere recepten kun je met een JSON-export importeren.
+
+Voor de optionele AI-fotoherkenning: volg AI-FOTO-INSTELLEN.md. Daarvoor zijn een OpenAI API-sleutel en bijgewerkte Firestore-regels nodig.

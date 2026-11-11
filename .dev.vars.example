@@ -1,0 +1,5 @@
+# Alleen voor lokaal wrangler pages dev. Kopieer naar .dev.vars (wordt niet gecommit).
+OPENAI_API_KEY=
+FIREBASE_PROJECT_ID=receptenmap-59501
+FIREBASE_LIBRARY_ID=keuken
+OPENAI_MODEL=gpt-4.1-mini

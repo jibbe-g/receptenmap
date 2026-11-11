@@ -65,6 +65,29 @@ service cloud.firestore {
    );
    allow delete: if false;
   }
+  // Rolling 24-hour budget, enforced even if a client calls Firestore directly.
+  match /libraries/{library}/photoUsage/{uid} {
+   function ownMember() { return member(library) && request.auth.uid == uid; }
+   function validUsage() {
+    return request.resource.data.keys().hasAll(['count','windowStartedAt','lastUsedAt'])
+     && request.resource.data.keys().hasOnly(['count','windowStartedAt','lastUsedAt'])
+     && request.resource.data.count is int
+     && request.resource.data.count >= 1 && request.resource.data.count <= 20
+     && request.resource.data.lastUsedAt == request.time;
+   }
+   allow get: if ownMember();
+   allow list: if false;
+   allow create: if ownMember() && validUsage()
+    && request.resource.data.count == 1 && request.resource.data.windowStartedAt == request.time;
+   allow update: if ownMember() && validUsage()
+    && request.time >= resource.data.lastUsedAt + duration.value(15, 's')
+    && ((request.time < resource.data.windowStartedAt + duration.value(24, 'h')
+      && request.resource.data.windowStartedAt == resource.data.windowStartedAt
+      && request.resource.data.count == resource.data.count + 1)
+     || (request.time >= resource.data.windowStartedAt + duration.value(24, 'h')
+      && request.resource.data.windowStartedAt == request.time && request.resource.data.count == 1));
+   allow delete: if false;
+  }
   match /libraries/{library}/recipes/{recipe} {
    allow read: if member(library);
    allow create: if member(library) && validRecipe(request.resource.data) && request.resource.data.revision == 1;
