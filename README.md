@@ -2,6 +2,10 @@
 
 React **18.3.1** + Vite + Firebase Authentication / Firestore + Recharts. Hosting: **Cloudflare Pages**, standaard `pages.dev`-adres. Fotoherkenning: Tesseract.js op het apparaat. Geen Cloudflare Worker, D1 of R2 nodig.
 
+## Collega’s laten aanvragen
+
+Zie [BEHEER-ACTIVEREN.md](BEHEER-ACTIVEREN.md) voor de eenmalige migratie van bestaande installaties. Na het publiceren van de nieuwste Firestore-regels en het toevoegen van `role: admin` aan je eigen ledenrecord kun je aanvragen in de app goedkeuren of afwijzen. Nieuwe collega’s melden zich met Google aan en vragen zelf toegang.
+
 ## 1. Probeer lokaal
 
 Installeer Node.js 22 LTS of nieuwer en Git. Open deze projectmap in een terminal:
@@ -40,7 +44,7 @@ Meld je bij GitHub aan via je eigen Git-client of GitHub Desktop. Upload geen `n
 7. Maak in Firestore → Gegevens een document op dit pad:
    `libraries/keuken/members/jouw-google-email@gmail.com`
    Gebruik je **exacte e-mailadres zoals Google het aan de app doorgeeft**, normaal kleine letters. Voeg bijvoorbeeld veld `name` (string) met je naam toe. Het bovenliggende document `libraries/keuken` mag bijvoorbeeld veld `name: Receptenmap` bevatten.
-8. Maak voor iedere collega eenzelfde document onder `members`, met diens Google-e-mailadres als document-ID. Leden kunnen alle recepten bekijken, toevoegen, bewerken en verwijderen. Alleen de beheerder voegt via de Firebase Console leden toe. Gebruik voor deze eerste versie Google-accounts.
+8. Maak voor iedere collega eenzelfde document onder `members`, met diens Google-e-mailadres als document-ID. Leden kunnen alle recepten bekijken, toevoegen, bewerken en verwijderen. Voeg aan je eigen ledenrecord ook veld `role` (string) met waarde `admin` toe. Daarna kunnen collega’s in de app toegang aanvragen en kun je ze via **Leden & aanvragen** goedkeuren. Rechtstreeks leden toevoegen via de Firebase Console blijft mogelijk. Gebruik voor deze eerste versie Google-accounts.
 9. Herstart `npm run dev` na het invullen van `.env.local`. Log in met Google. De gedeelde database begint leeg: voeg een recept toe of importeer een JSON-export uit de oude HTML-map. Voorbeeldrecepten worden nooit automatisch centraal toegevoegd.
 
 Je kunt regels ook met de Firebase CLI publiceren, na aanmelden op jouw account: `npx firebase-tools deploy --only firestore:rules --project JOUW-PROJECT-ID`. Hiervoor is de Console ook voldoende; een extra CLI is niet vereist.
@@ -85,7 +89,8 @@ Elke push naar `main` activeert daarna een nieuwe Pages-build. Wijzig je buildva
 
 ```sh
 npm test
+npm run test:rules
 npm run build
 ```
 
-De geautomatiseerde tests controleren importcompatibiliteit, invoervalidatie, tekstindeling en portieomrekening. Zonder eigen Firebase-/Cloudflare-account zijn authenticatie, Firestore-regels en een productie-deployment **nog niet end-to-end geverifieerd**. Test toegestane/geweigerde accounts en gelijktijdig bewerken vóór gebruik met echte recepten.
+De geautomatiseerde tests controleren importcompatibiliteit, invoervalidatie, tekstindeling en portieomrekening. Daarnaast testen we de Firestore-regels met de lokale emulator: aanvragen, goedkeuring, afwijzing, privacy en het blokkeren van ongeoorloofde beheerdersrechten. De emulator vereist Java 21+. Zonder eigen Firebase-/Cloudflare-account zijn productie-authenticatie en de Firebase-configuratie **nog niet end-to-end geverifieerd**. Test toegestane/geweigerde accounts en gelijktijdig bewerken vóór gebruik met echte recepten.

@@ -3,6 +3,18 @@ service cloud.firestore {
  match /databases/{database}/documents {
   function signedIn() { return request.auth != null && request.auth.token.email_verified == true; }
   function member(library) { return signedIn() && exists(/databases/$(database)/documents/libraries/$(library)/members/$(request.auth.token.email)); }
+  function admin(library) {
+   return member(library) && get(/databases/$(database)/documents/libraries/$(library)/members/$(request.auth.token.email)).data.get('role', 'editor') == 'admin';
+  }
+  function ownRequest(uid) { return signedIn() && request.auth.uid == uid; }
+  function validAccessRequest(d, uid) {
+   return d.keys().hasAll(['uid','email','name','status','createdAt','updatedAt'])
+    && d.keys().hasOnly(['uid','email','name','status','createdAt','updatedAt','reviewedBy'])
+    && d.uid == uid && d.email is string && d.email.size() <= 320
+    && d.name is string && d.name.size() <= 200
+    && d.createdAt is timestamp && d.updatedAt == request.time
+    && d.status in ['pending','approved','rejected'];
+  }
   function validRecipe(d) {
    return d.keys().hasAll(['name','category','author','servings','minutes','ingredients','steps','notes','revision','updated','updatedBy'])
     && d.keys().hasOnly(['name','category','author','servings','minutes','ingredients','steps','notes','revision','updated','updatedBy'])
@@ -17,8 +29,41 @@ service cloud.firestore {
     && d.revision is int && d.updated is timestamp && d.updated == request.time && d.updatedBy == request.auth.uid;
   }
   match /libraries/{library}/members/{email} {
-   allow get: if signedIn() && request.auth.token.email == email;
-   allow list, write: if false;
+   allow get: if (signedIn() && request.auth.token.email == email) || admin(library);
+   allow list: if admin(library);
+   // The first admin is assigned only in the trusted Firebase Console.
+   // App approvals can create editors, never promote anyone to admin.
+   allow create: if admin(library)
+    && request.resource.data.keys().hasAll(['uid','email','name','role','joinedAt','approvedBy'])
+    && request.resource.data.keys().hasOnly(['uid','email','name','role','joinedAt','approvedBy'])
+    && request.resource.data.uid is string && request.resource.data.uid.size() > 0
+    && request.resource.data.email == email
+    && request.resource.data.name is string && request.resource.data.name.size() <= 200
+    && request.resource.data.role == 'editor'
+    && request.resource.data.joinedAt == request.time
+    && request.resource.data.approvedBy == request.auth.uid;
+   allow update, delete: if false;
+  }
+  match /libraries/{library}/accessRequests/{uid} {
+   allow get: if ownRequest(uid) || admin(library);
+   allow list: if admin(library);
+   allow create: if ownRequest(uid) && !member(library)
+    && validAccessRequest(request.resource.data, uid)
+    && request.resource.data.email == request.auth.token.email
+    && request.resource.data.status == 'pending'
+    && request.resource.data.createdAt == request.time
+    && !request.resource.data.keys().hasAny(['reviewedBy']);
+   allow update: if validAccessRequest(request.resource.data, uid) && (
+    (ownRequest(uid) && !member(library) && resource.data.status in ['rejected','approved']
+     && request.resource.data.email == request.auth.token.email
+     && request.resource.data.status == 'pending'
+     && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','updatedAt']))
+    || (admin(library) && resource.data.status == 'pending'
+     && request.resource.data.status in ['approved','rejected']
+     && request.resource.data.reviewedBy == request.auth.uid
+     && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','updatedAt','reviewedBy']))
+   );
+   allow delete: if false;
   }
   match /libraries/{library}/recipes/{recipe} {
    allow read: if member(library);
